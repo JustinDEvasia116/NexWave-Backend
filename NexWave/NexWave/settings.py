@@ -9,13 +9,12 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-from twilio.rest import Client
+
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 import os
-import firebase_admin
-from firebase_admin import credentials
+
 
 
 load_dotenv()
@@ -44,7 +43,10 @@ SECRET_KEY = 'django-insecure-%f19(n&57@o#jrcx(3zkxy!x)r2js0v8m_srynmfr_edjx%*!+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["16.171.26.247", "0.0.0.0", "localhost",
+                 "www.zaponline.info", "zaponline.info", "127.0.0.1","*"]
+
+CSRF_TRUSTED_ORIGINS = ['https://zaponline.info', 'https://www.zaponline.info']
 
 AUTH_USER_MODEL = 'USER.User'
 # Application definition

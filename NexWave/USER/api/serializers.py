@@ -26,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'active_subscription', 'mob_number', 'user_address']
+        fields = ['id', 'username', 'active_subscription', 'mob_number', 'user_address','is_active']
 
     def get_active_subscription(self, user):
         subscription = self.context.get('subscription')

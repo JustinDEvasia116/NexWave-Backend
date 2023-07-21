@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+import uuid
 
 
 
@@ -16,7 +17,8 @@ class User(AbstractUser):
         to='ADMIN.Subscription',
         on_delete=models.CASCADE,
         null=True,
-        blank=True
+        blank=True,
+        related_name='user_active_subscription'
     )
 
     def __str__(self):
@@ -33,7 +35,13 @@ class Connections(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     connection_type = models.CharField(max_length=20, choices=CONNECTION_TYPE_CHOICES)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, null=True, blank=True)
-    profile_name = models.CharField(max_length=20,null=True, blank=True)
+    profile_name = models.CharField(max_length=20, null=True, blank=True)
+    document_file = models.FileField(upload_to='documents/', null=True, blank=True)
+    photo = models.ImageField(upload_to='photos/', null=True, blank=True)
+
+    def __str__(self):
+        return self.mob_number
+
 
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

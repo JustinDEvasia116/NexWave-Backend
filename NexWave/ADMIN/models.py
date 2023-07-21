@@ -1,5 +1,6 @@
 # models.py
 from django.db import models
+from USER.models import User
 
 
 
@@ -18,6 +19,7 @@ class RechargePlan(models.Model):
     category = models.ForeignKey(PlanCategory, on_delete=models.CASCADE)
 
 class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True)
     plan = models.ForeignKey(RechargePlan, on_delete=models.CASCADE)
     start_date = models.DateField()
     end_date = models.DateField()

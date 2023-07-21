@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import TokenObtainPairWithMobNumberView
+from django.conf.urls.static import static
+from django.conf import settings
 
 from rest_framework_simplejwt.views import (
    
@@ -18,6 +20,6 @@ urlpatterns = [
     path('user-login/', views.UserLoginView.as_view() , name='user-login'),
     path('user-details/', views.UserDetailsAPIView.as_view(), name='user-details'),
     path('create-subscription/', views.SubscriptionCreateAPIView.as_view(), name='create-subscription'),
-    
-    
+    path('recommended_plans/', views.recommended_plans, name='recommended_plans'),
+        
 ]

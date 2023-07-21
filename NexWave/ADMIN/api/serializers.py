@@ -40,9 +40,10 @@ class PlanSerializer(serializers.ModelSerializer):
         return Plan
 
 class SubscriptionSerializer(serializers.ModelSerializer):
+    plan = PlanSerializer() 
     class Meta:
         model = Subscription
-        fields = '__all__'
+        fields = ['id', 'user', 'plan', 'start_date', 'end_date', 'is_active', 'billing_info']
 
 class ChatOptionSerializer(serializers.ModelSerializer):
     class Meta:

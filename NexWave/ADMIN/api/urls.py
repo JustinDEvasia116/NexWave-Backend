@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
 
+
 urlpatterns = [
     path('', views.RoutesAPIView.as_view(), name='available-routes'),
     path('pending-connections/', views.PendingConnectionsView.as_view(), name='pending-connections'),   

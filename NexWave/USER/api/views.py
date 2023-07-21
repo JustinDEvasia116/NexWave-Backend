@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-
+from rest_framework.exceptions import NotFound
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date, timedelta
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db.models import Count
 
 
 from ..models import Connections
@@ -48,16 +49,6 @@ class ConnectionCreateView(APIView):
         serializer = ConnectionSerializer(data=request.data)
         if serializer.is_valid():
             connection = serializer.save()
-
-        # Send a notification to the admin group
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                'admin',  # Group name
-                {
-                    'type': 'notification',
-                    'message': f"New connection created: {connection.id}",
-                }
-            )
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -140,40 +131,45 @@ class UserLoginView(APIView):
 
 
 
-class UserDetailsAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+# class UserDetailsAPIView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        user_id = request.user.id
-        user = User.objects.get(id=user_id)
+#     def get(self, request):
+#         user_id = request.user.id
+#         user = User.objects.get(id=user_id)
 
-        serializer = UserSerializer(user)
-        return JsonResponse(serializer.data)
+#         serializer = UserSerializer(user)
+#         return JsonResponse(serializer.data)
  
 class UserDetailsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_id = request.user.id
-        user = User.objects.get(id=user_id)
-
         try:
-            subscription = user.active_subscription
-            recharge_plan = subscription.plan
-        except Subscription.DoesNotExist:
-            subscription = None
-            recharge_plan = None
+            user = request.user
 
-        serializer = UserSerializer(user, context={'request': request})  # Pass the request instead of individual objects
-        data = serializer.data
+            serializer = UserSerializer(user, context={'request': request})
+            data = serializer.data
 
-        if subscription and recharge_plan:
-            subscription_serializer = SubscriptionSerializer(subscription)
-            recharge_plan_serializer = PlanSerializer(recharge_plan)
-            data['active_subscription'] = subscription_serializer.data
-            data['active_subscription']['plan'] = recharge_plan_serializer.data
+            active_subscription = serializer.get_active_subscription(user)
+            
 
-        return Response(data)
+            if active_subscription:
+                recharge_plan_id = active_subscription['plan']
+                # recharge_plan = RechargePlan.objects.get(id=recharge_plan_id)
+                plan_serializer = recharge_plan_id
+                data['active_subscription'] = active_subscription
+                data['active_subscription']['plan'] = plan_serializer
+
+            # data['recharge_history'] = recharge_history
+
+            return Response(data)
+        
+        except User.DoesNotExist:
+            return Response({'error': 'User does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
     
@@ -181,10 +177,11 @@ class SubscriptionCreateAPIView(APIView):
     def post(self, request):
         # Retrieve the data from the request
         recharge_plan_id = request.data.get('recharge_plan_id')
-        
+        user_id = request.data.get('user')
+
         # Validate the data
-        if not recharge_plan_id :
-            return Response({'error': 'Recharge plan ID and Recharge ID are required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not recharge_plan_id:
+            return Response({'error': 'Recharge plan ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Retrieve the selected recharge plan
@@ -194,18 +191,57 @@ class SubscriptionCreateAPIView(APIView):
             start_date = date.today()
             end_date = start_date + timedelta(days=recharge_plan.validity)
 
+            # Retrieve the current user
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                raise NotFound("User not found")
+
+            # Check if the user has an active subscription
+            existing_subscription = Subscription.objects.filter(user=user, is_active=True).first()
+
             # Create the subscription
+            if existing_subscription:
+                is_active = False
+            else:
+                is_active = start_date <= date.today() <= end_date
+
             subscription = Subscription.objects.create(
+                user=user,
                 plan=recharge_plan,
                 start_date=start_date,
                 end_date=end_date,
-                is_active=start_date <= date.today() <= end_date,
+                is_active=is_active,
                 billing_info='',
             )
-
             # Serialize the subscription data
             serializer = SubscriptionSerializer(subscription)
-
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except RechargePlan.DoesNotExist:
-            return Response({'error': 'Invalid recharge plan ID'}, status=status.HTTP_400_BAD_REQUEST)
+            raise NotFound("Invalid recharge plan ID")
+
+@api_view(['GET'])
+def recommended_plans(request):
+    user = request.user.id
+
+    # Group subscriptions by plan ID and count how many times each plan appears
+    subscribed_plans_count = Subscription.objects.filter(user=user) \
+        .values('plan') \
+        .annotate(subscription_count=Count('plan'))
+
+    # Sort the plans in descending order of subscription count
+    sorted_plans = sorted(subscribed_plans_count, key=lambda x: x['subscription_count'], reverse=True)
+
+    # Retrieve the top two most subscribed plans
+    top_two_plans = sorted_plans[:2]
+
+    # Get the plan IDs of the top two plans
+    top_two_plan_ids = [plan['plan'] for plan in top_two_plans]
+
+    # Fetch the RechargePlan objects corresponding to the top two plan IDs
+    recommended_plans = RechargePlan.objects.filter(id__in=top_two_plan_ids)
+
+    # Serialize the data
+    serializer = PlanSerializer(recommended_plans, many=True)
+
+    return Response(serializer.data)

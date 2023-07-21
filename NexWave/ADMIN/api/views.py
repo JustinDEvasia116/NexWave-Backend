@@ -95,8 +95,16 @@ class SubscriptionCreateView(APIView):
     def post(self, request, format=None):
         serializer = SubscriptionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        user = request.user  # Assuming you're using token-based authentication or session-based authentication
+        existing_subscription = Subscription.objects.filter(user=user, is_active=True).first()
+
+        if existing_subscription:
+            serializer.save(user=user)
+        else:
+            serializer.save(user=user, is_active=True)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class RoutesAPIView(APIView):
     def get(self, request):

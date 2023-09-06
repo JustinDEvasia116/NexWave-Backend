@@ -58,7 +58,7 @@ class ConnectionCreateView(APIView):
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
-        '/admins'
+        '/admins',
         '/api/token',
         '/api/token/refresh',
         '/api/signup',

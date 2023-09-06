@@ -43,7 +43,7 @@ SECRET_KEY = 'django-insecure-%f19(n&57@o#jrcx(3zkxy!x)r2js0v8m_srynmfr_edjx%*!+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["16.171.26.247", "0.0.0.0", "localhost",
+ALLOWED_HOSTS = ["13.51.158.127", "0.0.0.0", "localhost",
                  "www.zaponline.info", "zaponline.info", "127.0.0.1","*"]
 
 CSRF_TRUSTED_ORIGINS = ['https://zaponline.info', 'https://www.zaponline.info']

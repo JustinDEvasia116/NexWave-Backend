@@ -27,6 +27,7 @@ from rest_framework_simplejwt.tokens import Token
 import paypalrestsdk
 from paypalrestsdk import Payment
 
+
 class TokenObtainPairWithMobNumberSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -57,11 +58,17 @@ class ConnectionCreateView(APIView):
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
+        '/admins'
         '/api/token',
         '/api/token/refresh',
         '/api/signup',
         '/api/connections/create/',
         '/admins/pending-connections/'
+        '/api/generate-otp/',
+        '/api/user-login/',
+        '/api/user-details/',
+        '/api/create-subscription/',
+        '/api/recommended_plans/',
     ]
     return Response(routes)
 
@@ -120,15 +127,12 @@ class UserLoginView(APIView):
             access_token.payload['username'] = mob_number
             access_token.payload['is_user'] = True
             response_data = {
-            'access': str(access_token),
-            'refresh': str(refresh),
+                'access': str(access_token),
+                'refresh': str(refresh),
             }
             return JsonResponse(response_data, status=status.HTTP_200_OK)
         else:
             return JsonResponse({'message': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
-        
-
-
 
 
 # class UserDetailsAPIView(APIView):
@@ -140,7 +144,7 @@ class UserLoginView(APIView):
 
 #         serializer = UserSerializer(user)
 #         return JsonResponse(serializer.data)
- 
+
 class UserDetailsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -152,7 +156,6 @@ class UserDetailsAPIView(APIView):
             data = serializer.data
 
             active_subscription = serializer.get_active_subscription(user)
-            
 
             if active_subscription:
                 recharge_plan_id = active_subscription['plan']
@@ -164,15 +167,14 @@ class UserDetailsAPIView(APIView):
             # data['recharge_history'] = recharge_history
 
             return Response(data)
-        
+
         except User.DoesNotExist:
             return Response({'error': 'User does not exist.'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-    
 class SubscriptionCreateAPIView(APIView):
     def post(self, request):
         # Retrieve the data from the request
@@ -198,7 +200,8 @@ class SubscriptionCreateAPIView(APIView):
                 raise NotFound("User not found")
 
             # Check if the user has an active subscription
-            existing_subscription = Subscription.objects.filter(user=user, is_active=True).first()
+            existing_subscription = Subscription.objects.filter(
+                user=user, is_active=True).first()
 
             # Create the subscription
             if existing_subscription:
@@ -220,6 +223,7 @@ class SubscriptionCreateAPIView(APIView):
         except RechargePlan.DoesNotExist:
             raise NotFound("Invalid recharge plan ID")
 
+
 @api_view(['GET'])
 def recommended_plans(request):
     user = request.user.id
@@ -230,7 +234,8 @@ def recommended_plans(request):
         .annotate(subscription_count=Count('plan'))
 
     # Sort the plans in descending order of subscription count
-    sorted_plans = sorted(subscribed_plans_count, key=lambda x: x['subscription_count'], reverse=True)
+    sorted_plans = sorted(subscribed_plans_count,
+                          key=lambda x: x['subscription_count'], reverse=True)
 
     # Retrieve the top two most subscribed plans
     top_two_plans = sorted_plans[:2]

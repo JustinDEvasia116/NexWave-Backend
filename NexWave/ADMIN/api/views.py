@@ -113,6 +113,15 @@ class RoutesAPIView(APIView):
             '/admins/pending-connections/<int:pk>/actions/',
             '/admins/plan-categories/add/',
             '/admins/plans/add/',
+            '/admins/admin-token/',
+            '/admins/admin-token/refresh/',
+            '/admins/plans/create/',
+            '/admins/subscriptions/create/',
+            '/admins/recharge-plans/'
+            '/admins/categories/'
+            '/admins/subscriptions/'
+            '/admins/users/'
+            '/admins/chat-options/'
         ]
         return Response(routes)
 
